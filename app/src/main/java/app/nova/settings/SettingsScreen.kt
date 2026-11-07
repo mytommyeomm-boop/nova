@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.*
@@ -35,6 +36,9 @@ fun SettingsScreen(engine: ChatEngine, s: Settings) {
     val scope = rememberCoroutineScope()
     val keyPresent by store.keyPresent.collectAsState()
 
+    val savedKeys by store.keys.collectAsState()
+    val activeKey by store.activeKeyId.collectAsState()
+    var keyLabel by remember { mutableStateOf("") }
     var keyText by remember { mutableStateOf("") }
     var showKey by remember { mutableStateOf(false) }
     var keyMsg by remember { mutableStateOf<String?>(null) }
@@ -81,30 +85,44 @@ fun SettingsScreen(engine: ChatEngine, s: Settings) {
                     color = NovaColors.Muted, style = MaterialTheme.typography.labelSmall
                 )
             }
+            Text(t("คีย์ที่บันทึกไว้", "Saved API keys"), color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            if (savedKeys.isEmpty()) {
+                Text(t("ยังไม่มีคีย์", "No keys saved yet"), color = NovaColors.Muted, style = MaterialTheme.typography.labelSmall)
+            }
+            savedKeys.forEach { k ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = k.id == activeKey, onClick = { scope.launch(Dispatchers.IO) { store.selectKey(k.id) } })
+                    Column(Modifier.weight(1f)) {
+                        Text(k.label)
+                        Text(k.hint + if (k.id == activeKey) t("  • ใช้งานอยู่", "  • in use") else "", color = NovaColors.Muted, style = MaterialTheme.typography.labelSmall)
+                    }
+                    IconButton(onClick = { scope.launch(Dispatchers.IO) { store.deleteKey(k.id) }; keyMsg = t2(s, "ลบคีย์แล้ว", "Key removed") }) {
+                        Icon(Icons.Rounded.Delete, contentDescription = t("ลบคีย์", "Delete key"), tint = NovaColors.Danger)
+                    }
+                }
+            }
             OutlinedTextField(
-                keyText, { keyText = it }, label = { Text("API key") }, singleLine = true,
+                keyLabel, { keyLabel = it }, label = { Text(t("ชื่อคีย์ (ไม่บังคับ)", "Key name (optional)")) }, singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            )
+            OutlinedTextField(
+                keyText, { keyText = it }, label = { Text(t("API key ใหม่", "New API key")) }, singleLine = true,
                 visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { showKey = !showKey }) { Icon(if (showKey) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, null) }
                 },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(enabled = keyText.isNotBlank(), onClick = {
                     scope.launch {
-                        val ok = withContext(Dispatchers.IO) { store.setApiKey(keyText) }
-                        keyMsg = if (ok) t2(s, "บันทึกคีย์แบบเข้ารหัสแล้ว", "Key saved (encrypted)") else t2(s, "เก็บคีย์อย่างปลอดภัยไม่ได้บนเครื่องนี้", "Secure storage unavailable on this device")
-                        if (ok) keyText = ""
+                        val ok = withContext(Dispatchers.IO) { store.addKey(keyLabel, keyText) }
+                        keyMsg = if (ok) t2(s, "บันทึกคีย์แบบเข้ารหัสแล้ว และใช้คีย์นี้อยู่", "Key saved (encrypted) and now in use") else t2(s, "เก็บคีย์อย่างปลอดภัยไม่ได้บนเครื่องนี้", "Secure storage unavailable on this device")
+                        if (ok) { keyText = ""; keyLabel = "" }
                     }
                 }) { Text(t("บันทึกคีย์", "Save key")) }
-                if (keyPresent) TextButton(onClick = {
-                    scope.launch { withContext(Dispatchers.IO) { store.setApiKey("") }; keyMsg = t2(s, "ลบคีย์แล้ว", "Key removed") }
-                }) { Text(t("ลบคีย์", "Remove key"), color = NovaColors.Danger) }
             }
-            Text(
-                keyMsg ?: if (keyPresent) t("มีคีย์บันทึกอยู่แล้ว", "A key is stored") else t("ยังไม่มีคีย์", "No key stored"),
-                color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium
-            )
+            keyMsg?.let { Text(it, color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium) }
             Text(
                 t("คีย์ถูกเก็บแบบเข้ารหัสบนเครื่องคุณเท่านั้น ข้อความที่คุยกับ NOVA จะถูกส่งไปให้ผู้ให้บริการคลาวด์ที่คุณเลือกประมวลผล",
                     "Your key is stored encrypted on this device only. Messages you send to NOVA are processed by the cloud provider you choose."),

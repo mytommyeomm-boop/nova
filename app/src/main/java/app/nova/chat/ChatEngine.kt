@@ -86,7 +86,7 @@ class ChatEngine(
 
     /** Pulls the provider's own explanation out of an error body so the user sees the real reason. */
     private fun providerDetail(raw: String?): String {
-        val m = Regex(""""message"\s*:\s*"((?:[^"\\]|\\.)*)"""").find(raw.orEmpty())
+        val m = Regex(""""message"\s*:\s*"((?:[^"\\]|\\.)*)""").find(raw.orEmpty())
         return (m?.groupValues?.get(1) ?: raw.orEmpty()).replace("\\n", " ").take(220)
     }
 

@@ -46,7 +46,7 @@ internal fun sseFlow(req: Request, parse: (String) -> String?): Flow<String> = c
         try {
             call.execute().use { resp ->
                 if (!resp.isSuccessful) {
-                    val body = resp.body?.string().orEmpty().take(300)
+                    val body = resp.body?.string().orEmpty().take(1500)
                     throw AiException("HTTP ${resp.code}: $body", resp.code >= 500, resp.code)
                 }
                 val src = resp.body?.source() ?: throw AiException("Empty response", true)
