@@ -115,14 +115,8 @@ fun SettingsScreen(engine: ChatEngine, s: Settings) {
         // ---------- personality ----------
         SectionLabel(t("บุคลิกของ NOVA", "NOVA's personality"))
         NovaCard(Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                persona, { persona = it }, modifier = Modifier.fillMaxWidth(), minLines = 3,
-                label = { Text(t("system prompt (ว่าง = ค่าเริ่มต้น)", "System prompt (empty = default)")) }
-            )
-            Row {
-                Button(enabled = persona != s.persona, onClick = { store.save { it[Keys.persona] = persona } }) { Text(t("บันทึก", "Save")) }
-                if (s.persona.isNotBlank()) TextButton(onClick = { persona = ""; store.save { it[Keys.persona] = "" } }) { Text(t("รีเซ็ต", "Reset")) }
-            }
+            Text(t("🔒 ล็อกแล้ว — แก้ไขไม่ได้", "🔒 Locked — not editable"), color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium)
+            Text(app.nova.chat.ChatEngine.DEFAULT_PERSONA, modifier = Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall)
         }
 
         // ---------- character ----------

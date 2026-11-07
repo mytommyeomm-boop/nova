@@ -75,7 +75,20 @@ class ChatEngine(
     private var lastInteraction = System.currentTimeMillis()
     private var moodToken = 0
 
+    companion object {
+        const val DEFAULT_PERSONA =
+            "You are NOVA, a small cat-eared AI companion who lives on the user's phone. " +
+                "You are warm, playful and a little shy. Keep replies short (1-3 sentences) unless the user asks for detail. " +
+                "Never claim abilities you do not have: you cannot control other apps, read the screen or act outside the app's built-in skills."
+    }
+
     private fun lang() = settings.state.value.lang
+
+    /** Pulls the provider's own explanation out of an error body so the user sees the real reason. */
+    private fun providerDetail(raw: String?): String {
+        val m = Regex(""""message"\s*:\s*"((?:[^"\\]|\\.)*)"""").find(raw.orEmpty())
+        return (m?.groupValues?.get(1) ?: raw.orEmpty()).replace("\\n", " ").take(220)
+    }
 
     init {
         // Falls asleep after a while without interaction.
@@ -256,11 +269,7 @@ class ChatEngine(
     private suspend fun buildSystem(): String {
         val s = settings.state.value
         val langName = if (s.lang == "th") "Thai" else "English"
-        val persona = s.persona.ifBlank {
-            "You are NOVA, a small cat-eared AI companion who lives on the user's phone. " +
-                "You are warm, playful and a little shy. Keep replies short (1-3 sentences) unless the user asks for detail. " +
-                "Never claim abilities you do not have: you cannot control other apps, read the screen or act outside the app's built-in skills."
-        }
+        val persona = DEFAULT_PERSONA // personality is locked; any old saved custom prompt is ignored
         val sb = StringBuilder(persona)
         sb.append("\nReply in $langName unless the user writes in another language.")
         sb.append("\nResponse length: ").append(when (s.maxTokens) {
@@ -287,7 +296,7 @@ class ChatEngine(
             is SocketTimeoutException -> tr(l, "การเชื่อมต่อหมดเวลา", "The request timed out.")
             is AiException -> when (e.code) {
                 503, 500, 502, 504 -> tr(l, "เซิร์ฟเวอร์ AI กำลังมีคนใช้เยอะ ลองแล้วหลายครั้งแต่ยังไม่ได้ รอสักครู่แล้วกด \"ลองใหม่\" นะ", "The AI server is busy right now. I retried a few times; wait a moment and tap Retry.")
-                429 -> tr(l, "ใช้งานเกินโควตาชั่วคราว รอสักครู่แล้วลองใหม่", "Rate limit reached. Wait a bit and retry.")
+                429 -> tr(l, "ผู้ให้บริการ AI ตอบกลับว่าเกินโควตา (ไม่ใช่ข้อจำกัดของ NOVA)\nรายละเอียด: ", "The AI provider reported a quota/rate limit (not a NOVA limit).\nDetails: ") + providerDetail(e.message)
                 404 -> tr(l, "ไม่พบโมเดลนี้ ไปที่ ตั้งค่า > โมเดล แล้วเปลี่ยนชื่อโมเดล", "Model not found. Change it in Settings > Model.")
                 400, 401, 403 -> tr(l, "API key หรือโมเดลไม่ถูกต้อง ตรวจสอบที่ ตั้งค่า > AI", "Invalid API key or model. Check Settings > AI.")
                 else -> e.message ?: "AI error"
