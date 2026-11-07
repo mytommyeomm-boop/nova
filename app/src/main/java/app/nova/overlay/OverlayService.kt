@@ -14,6 +14,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import app.nova.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
