@@ -32,7 +32,11 @@ data class Settings(
     val overlaySnap: Boolean = true,
     val overlayX: Int = 0,
     val overlayY: Int = 400,
-    val remindNotif: Boolean = true
+    val remindNotif: Boolean = true,
+    val historyLimit: Int = 12,
+    val maxTokens: Int = 600,
+    val instantText: Boolean = false,
+    val showPerf: Boolean = false
 )
 
 object Keys {
@@ -56,6 +60,10 @@ object Keys {
     val overlayX = intPreferencesKey("overlay_x")
     val overlayY = intPreferencesKey("overlay_y")
     val remindNotif = booleanPreferencesKey("remind_notif")
+    val historyLimit = intPreferencesKey("history_limit")
+    val maxTokens = intPreferencesKey("max_tokens")
+    val instantText = booleanPreferencesKey("instant_text")
+    val showPerf = booleanPreferencesKey("show_perf")
 }
 
 private fun Preferences.toSettings(): Settings {
@@ -81,7 +89,11 @@ private fun Preferences.toSettings(): Settings {
         overlaySnap = this[Keys.overlaySnap] ?: d.overlaySnap,
         overlayX = this[Keys.overlayX] ?: d.overlayX,
         overlayY = this[Keys.overlayY] ?: d.overlayY,
-        remindNotif = this[Keys.remindNotif] ?: d.remindNotif
+        remindNotif = this[Keys.remindNotif] ?: d.remindNotif,
+        historyLimit = this[Keys.historyLimit] ?: d.historyLimit,
+        maxTokens = this[Keys.maxTokens] ?: d.maxTokens,
+        instantText = this[Keys.instantText] ?: d.instantText,
+        showPerf = this[Keys.showPerf] ?: d.showPerf
     )
 }
 

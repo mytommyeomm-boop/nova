@@ -21,6 +21,19 @@ import java.net.UnknownHostException
 
 data class Bubble(val text: String, val ts: Long)
 
+/** Real measurements for the last request. ttftMs/totalMs are -1 until known. Tokens are estimated (chars/4) unless the provider reports them. */
+data class PerfStats(
+    val startMs: Long = 0,
+    val ttftMs: Long = -1,
+    val totalMs: Long = -1,
+    val chars: Int = 0,
+    val status: String = "idle", // idle | connecting | streaming | ok | error | cancelled
+    val provider: String = "",
+    val model: String = ""
+) {
+    val approxTokens: Int get() = (chars + 3) / 4
+}
+
 /**
  * Shared "view-model" for the whole app. Both the Compose screens and the floating overlay observe it,
  * so NOVA's mood, speech bubble and conversation stay in sync everywhere.
@@ -52,6 +65,8 @@ class ChatEngine(
     val error = _error.asStateFlow()
     private val _proposal = MutableStateFlow<String?>(null)
     val proposal = _proposal.asStateFlow()
+    private val _perf = MutableStateFlow(PerfStats())
+    val perf = _perf.asStateFlow()
     private val _partial = MutableStateFlow("")
     val partial = _partial.asStateFlow()
 
@@ -164,33 +179,44 @@ class ChatEngine(
 
     fun dismissProposal() { _proposal.value = null }
 
+    /** Claims the single generation slot synchronously, so two quick taps can never start two requests. */
+    private fun claim(): Boolean = _generating.compareAndSet(false, true)
+
+    private fun launchGeneration(pre: suspend () -> Unit = {}) {
+        job = scope.launch {
+            try {
+                pre()
+                generate()
+            } finally {
+                // generate() resets this itself; this covers cancellation/failure before it starts.
+                _generating.value = false
+            }
+        }
+    }
+
     fun send(text: String) {
         val t = text.trim()
-        if (t.isEmpty() || _generating.value) return
+        if (t.isEmpty() || !claim()) return
         touch()
         _error.value = null
         replayJob?.cancel()
         detectMemoryProposal(t)
-        job = scope.launch {
-            db.messages().insert(MessageItem(role = "user", text = t))
-            generate()
-        }
+        launchGeneration { db.messages().insert(MessageItem(role = "user", text = t)) }
     }
 
     fun regenerate() {
-        if (_generating.value) return
+        if (!claim()) return
         _error.value = null
-        job = scope.launch {
+        launchGeneration {
             val last = db.messages().last(1).firstOrNull()
             if (last != null && last.role == "assistant") db.messages().delete(last.id)
-            generate()
         }
     }
 
     fun retryLast() {
-        if (_generating.value) return
+        if (!claim()) return
         _error.value = null
-        job = scope.launch { generate() }
+        launchGeneration()
     }
 
     fun deleteMessage(id: Long) { scope.launch { db.messages().delete(id) } }
@@ -214,6 +240,19 @@ class ChatEngine(
         return AiConfig(s.provider, s.model, s.baseUrl, key)
     }
 
+    /** Keeps the newest messages that fit a character budget, so a few long messages cannot bloat every request. */
+    private fun trimHistory(h: List<ChatMsg>, budget: Int = 6000): List<ChatMsg> {
+        var used = 0
+        val out = ArrayDeque<ChatMsg>()
+        for (m in h.asReversed()) {
+            if (out.isNotEmpty() && used + m.text.length > budget) break
+            out.addFirst(m); used += m.text.length
+        }
+        // providers require the conversation to start with a user turn
+        while (out.isNotEmpty() && out.first().role != "user") out.removeFirst()
+        return out.toList()
+    }
+
     private suspend fun buildSystem(): String {
         val s = settings.state.value
         val langName = if (s.lang == "th") "Thai" else "English"
@@ -224,6 +263,11 @@ class ChatEngine(
         }
         val sb = StringBuilder(persona)
         sb.append("\nReply in $langName unless the user writes in another language.")
+        sb.append("\nResponse length: ").append(when (s.maxTokens) {
+            in 0..250 -> "very short, 1-2 sentences."
+            in 251..700 -> "short, usually 1-3 sentences."
+            else -> "as long as the question needs, but stay focused."
+        })
         sb.append("\nBegin EVERY reply with exactly one emotion tag in square brackets, chosen from: ")
         sb.append("[idle] [happy] [sad] [sleepy] [surprised] [confused] [angry] [shy]. Then write the reply.")
         if (s.memoryEnabled) {
@@ -259,6 +303,11 @@ class ChatEngine(
         _shown.value = ""
         val s = settings.state.value
 
+        val t0 = System.currentTimeMillis()
+        var firstTokenAt = -1L
+        val backlog = java.util.concurrent.atomic.AtomicInteger(0)
+        _perf.value = PerfStats(startMs = t0, status = "connecting", provider = s.provider, model = s.model)
+
         val pending = Channel<Char>(Channel.UNLIMITED)
         val full = StringBuilder()
         var err: Throwable? = null
@@ -268,15 +317,20 @@ class ChatEngine(
             for (c in pending) {
                 _phase.value = Phase.TALKING
                 _shown.value = _shown.value + c
-                if (isBlipChar(c)) blip.blip(c, _mood.value)
-                delay(charDelay(s.textSpeed, c, _mood.value))
+                val behind = backlog.decrementAndGet()
+                // The typewriter effect must never make the user wait longer than the network did:
+                // the further behind it is, the faster it catches up (and it skips blips when far behind).
+                if (s.instantText || behind > 200) continue
+                if (isBlipChar(c) && behind < 60) blip.blip(c, _mood.value)
+                val d = charDelay(s.textSpeed, c, _mood.value)
+                delay(if (behind > 80) d / 6 else if (behind > 30) d / 3 else d)
             }
         }
 
         try {
             val cfg = try { config() } catch (e: AiException) { err = e; null }
             if (cfg != null) {
-                val history = db.messages().last(20).reversed().map { ChatMsg(it.role, it.text) }
+                val history = trimHistory(db.messages().last(s.historyLimit.coerceIn(2, 40)).reversed().map { ChatMsg(it.role, it.text) })
                 val system = buildSystem()
                 val provider = AiFactory.create(cfg)
 
@@ -284,6 +338,7 @@ class ChatEngine(
                 var tagDone = false
                 fun emit(text: String) {
                     full.append(text)
+                    backlog.addAndGet(text.length)
                     for (c in text) pending.trySend(c)
                 }
                 fun feed(d: String) {
@@ -307,7 +362,13 @@ class ChatEngine(
                 var attempt = 0
                 while (true) {
                     try {
-                        provider.stream(system, history).collect { gotAny = true; feed(it) }
+                        provider.stream(system, history, s.maxTokens).collect {
+                            if (firstTokenAt < 0) {
+                                firstTokenAt = System.currentTimeMillis()
+                                _perf.value = _perf.value.copy(ttftMs = firstTokenAt - t0, status = "streaming")
+                            }
+                            gotAny = true; feed(it)
+                        }
                         if (!tagDone && head.isNotEmpty()) { tagDone = true; emit(head.toString()) }
                         break
                     } catch (e: CancellationException) {
@@ -335,6 +396,11 @@ class ChatEngine(
                 if (finalText.isNotEmpty()) _bubble.value = Bubble(finalText.take(90), System.currentTimeMillis())
                 holdMood(_mood.value)
                 err?.let { _error.value = friendly(it) }
+                _perf.value = _perf.value.copy(
+                    totalMs = System.currentTimeMillis() - t0,
+                    chars = full.length,
+                    status = if (err != null) "error" else if (!completed) "cancelled" else "ok"
+                )
             }
         }
         Unit
@@ -345,7 +411,7 @@ class ChatEngine(
     suspend fun oneShot(system: String, user: String): String {
         val cfg = config()
         val sb = StringBuilder()
-        AiFactory.create(cfg).stream(system, listOf(ChatMsg("user", user))).collect { sb.append(it) }
+        AiFactory.create(cfg).stream(system, listOf(ChatMsg("user", user)), 600).collect { sb.append(it) }
         return sb.toString().trim()
     }
 

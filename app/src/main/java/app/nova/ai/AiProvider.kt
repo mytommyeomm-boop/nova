@@ -22,7 +22,7 @@ class AiException(message: String, val retryable: Boolean = false, val code: Int
 
 /** Add new providers by implementing this interface and registering them in [AiFactory]. */
 interface AiProvider {
-    fun stream(system: String, history: List<ChatMsg>): Flow<String>
+    fun stream(system: String, history: List<ChatMsg>, maxTokens: Int = 600): Flow<String>
 }
 
 object AiFactory {
@@ -32,8 +32,8 @@ object AiFactory {
 
 internal object Http {
     val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(45, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
     val json = "application/json; charset=utf-8".toMediaType()
@@ -71,7 +71,7 @@ internal fun sseFlow(req: Request, parse: (String) -> String?): Flow<String> = c
 }
 
 class GeminiProvider(private val cfg: AiConfig) : AiProvider {
-    private fun request(system: String, history: List<ChatMsg>, fast: Boolean): Request {
+    private fun request(system: String, history: List<ChatMsg>, fast: Boolean, maxTokens: Int): Request {
         val contents = JSONArray()
         history.forEach {
             contents.put(
@@ -85,7 +85,7 @@ class GeminiProvider(private val cfg: AiConfig) : AiProvider {
             .put("contents", contents)
         // Chat replies are short: ask the model to think as little as possible so answers start fast.
         if (fast) body.put("generationConfig", JSONObject()
-            .put("maxOutputTokens", 600)
+            .put("maxOutputTokens", maxTokens)
             .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
         val url = "https://generativelanguage.googleapis.com/v1beta/models/${cfg.model.trim()}:streamGenerateContent?alt=sse"
         return Request.Builder()
@@ -106,20 +106,20 @@ class GeminiProvider(private val cfg: AiConfig) : AiProvider {
         sb.toString()
     }
 
-    override fun stream(system: String, history: List<ChatMsg>): Flow<String> = flow {
+    override fun stream(system: String, history: List<ChatMsg>, maxTokens: Int): Flow<String> = flow {
         var any = false
         try {
-            sseFlow(request(system, history, true), parse).collect { any = true; emit(it) }
+            sseFlow(request(system, history, true, maxTokens), parse).collect { any = true; emit(it) }
         } catch (e: AiException) {
             // If the fast/thinking options are rejected (400), fall back to a plain request.
-            if (!any && e.code == 400) sseFlow(request(system, history, false), parse).collect { emit(it) }
+            if (!any && e.code == 400) sseFlow(request(system, history, false, maxTokens), parse).collect { emit(it) }
             else throw e
         }
     }
 }
 
 class OpenAiProvider(private val cfg: AiConfig) : AiProvider {
-    override fun stream(system: String, history: List<ChatMsg>): Flow<String> {
+    override fun stream(system: String, history: List<ChatMsg>, maxTokens: Int): Flow<String> {
         val msgs = JSONArray().put(JSONObject().put("role", "system").put("content", system))
         history.forEach { msgs.put(JSONObject().put("role", it.role).put("content", it.text)) }
         val body = JSONObject().put("model", cfg.model.trim()).put("messages", msgs).put("stream", true)

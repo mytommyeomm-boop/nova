@@ -147,6 +147,34 @@ fun SettingsScreen(engine: ChatEngine, s: Settings) {
             OutlinedButton(onClick = { engine.replay(t2(s, "ทดสอบเสียงของ NOVA", "Testing NOVA's voice")) }) { Text(t("ทดสอบเสียง", "Test voice")) }
         }
 
+        // ---------- response speed ----------
+        SectionLabel(t("ความเร็วการตอบ", "Response speed"))
+        NovaCard(Modifier.fillMaxWidth()) {
+            SwitchRow(t("แสดงข้อความทันที", "Instant text"), t("ไม่พิมพ์ทีละตัวอักษร (ไม่ลดคุณภาพคำตอบ)", "Skip the typewriter effect (does not change answer quality)"), s.instantText) { v -> store.save { it[Keys.instantText] = v } }
+            Text(t("ความยาวคำตอบ", "Response length"), color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+                NovaChip(s.maxTokens <= 250, t("สั้นมาก", "Very short")) { store.save { it[Keys.maxTokens] = 250 } }
+                NovaChip(s.maxTokens in 251..700, t("ปกติ", "Normal")) { store.save { it[Keys.maxTokens] = 600 } }
+                NovaChip(s.maxTokens > 700, t("ยาว", "Long")) { store.save { it[Keys.maxTokens] = 1200 } }
+            }
+            Text(t("ข้อความย้อนหลังที่ส่งไปด้วย", "Past messages sent with each request"), color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+                NovaChip(s.historyLimit <= 6, "6") { store.save { it[Keys.historyLimit] = 6 } }
+                NovaChip(s.historyLimit in 7..16, "12") { store.save { it[Keys.historyLimit] = 12 } }
+                NovaChip(s.historyLimit > 16, "24") { store.save { it[Keys.historyLimit] = 24 } }
+            }
+            SwitchRow(t("มอนิเตอร์ประสิทธิภาพ", "Performance monitor"), null, s.showPerf) { v -> store.save { it[Keys.showPerf] = v } }
+            if (s.showPerf) {
+                val perf by engine.perf.collectAsState()
+                val ttft = if (perf.ttftMs >= 0) "${perf.ttftMs} ms" else "—"
+                val total = if (perf.totalMs >= 0) "${perf.totalMs} ms" else "—"
+                Text(
+                    "status: ${perf.status}\nmodel: ${perf.provider} / ${perf.model}\nTTFT: $ttft\ntotal: $total\n~tokens: ${if (perf.chars > 0) perf.approxTokens else 0} (estimated)",
+                    color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+
         // ---------- language ----------
         SectionLabel(t("ภาษา", "Language"))
         NovaCard(Modifier.fillMaxWidth()) {
