@@ -128,7 +128,6 @@ fun SettingsScreen(engine: ChatEngine, s: Settings) {
         // ---------- character ----------
         SectionLabel(t("ตัวละคร", "Character"))
         NovaCard(Modifier.fillMaxWidth()) {
-            SwitchRow(t("มุมมองเต็มตัว", "Full-body view"), t("ปิด = แสดงใบหน้าพร้อมสีหน้า 9 แบบ เปิด = ภาพเต็มตัว (ท่านิ่ง)", "Off = portrait with 9 expressions. On = full-body (neutral pose)."), s.fullBody) { v -> store.save { it[Keys.fullBody] = v } }
             SliderRow(t("ขนาดตัวละคร", "Character size"), s.charScale, 0.5f..1f) { v -> store.save { it[Keys.charScale] = v } }
             SwitchRow(t("แอนิเมชัน", "Animations"), t("ปิดเพื่อประหยัดแบตเตอรี่", "Turn off to save battery"), s.animations) { v -> store.save { it[Keys.animations] = v } }
         }
@@ -171,7 +170,6 @@ fun SettingsScreen(engine: ChatEngine, s: Settings) {
                 else askOverlay = true
             }
             SliderRow(t("ขนาด", "Size"), s.overlaySize, 0.4f..1.2f) { v -> store.save { it[Keys.overlaySize] = v } }
-            SwitchRow(t("โหมดกะทัดรัด (เฉพาะหัว)", "Compact mode (head only)"), null, s.overlayCompact) { v -> store.save { it[Keys.overlayCompact] = v } }
             SwitchRow(t("เกาะขอบจอ", "Snap to screen edge"), null, s.overlaySnap) { v -> store.save { it[Keys.overlaySnap] = v } }
             Text(t("แตะ 1 ครั้ง = โต้ตอบ · แตะ 2 ครั้ง = แผงแชทด่วน · ลากเพื่อย้าย", "Tap = interact · double-tap = quick chat · drag to move"), color = NovaColors.Muted, style = MaterialTheme.typography.labelSmall)
         }

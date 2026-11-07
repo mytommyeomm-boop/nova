@@ -314,7 +314,7 @@ class ChatEngine(
                         throw e
                     } catch (e: Exception) {
                         val retryable = e is IOException || (e is AiException && e.retryable)
-                        if (!gotAny && attempt < 4 && retryable) { attempt++; delay(1500L * attempt); continue } // backoff 1.5s,3s,4.5s,6s
+                        if (!gotAny && attempt < 2 && retryable) { attempt++; delay(800L * attempt); continue } // short backoff: 0.8s, 1.6s
                         err = e
                         break
                     }

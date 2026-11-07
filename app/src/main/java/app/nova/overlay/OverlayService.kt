@@ -22,6 +22,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -276,7 +279,7 @@ class OverlayService : Service() {
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CharacterView(
-                mood = mood, phase = phase, compact = st.overlayCompact, animate = st.animations,
+                mood = mood, phase = phase, animate = st.animations,
                 modifier = Modifier
                     .width((200 * st.overlaySize).dp)
                     .pointerInput(Unit) {
@@ -286,7 +289,7 @@ class OverlayService : Service() {
                         }
                     }
                     .pointerInput(Unit) {
-                        detectTapGestures(onTap = { engine.poke() }, onDoubleTap = { onDoubleTap() })
+                        detectTapGestures(onTap = { onDoubleTap() }, onDoubleTap = { engine.poke() })
                     }
             )
             if (text.isNotEmpty()) {
@@ -310,8 +313,17 @@ class OverlayService : Service() {
         val shown by engine.shown.collectAsState()
         val generating by engine.generating.collectAsState()
         val error by engine.error.collectAsState()
+        val mood by engine.mood.collectAsState()
+        val phase by engine.phase.collectAsState()
+        val st by container.settings.state.collectAsState()
         var input by remember { mutableStateOf("") }
-        val last = msgs.takeLast(4)
+        val last = msgs.takeLast(30)
+        val listState = rememberLazyListState()
+        val total = last.size + (if (generating) 1 else 0)
+        LaunchedEffect(total, shown.length) {
+            if (total > 0) runCatching { listState.scrollToItem(total - 1) }
+        }
+        val send = { if (input.isNotBlank() && !generating) { engine.send(input); input = "" } }
 
         Column(
             Modifier
@@ -319,32 +331,68 @@ class OverlayService : Service() {
                 .border(1.dp, NovaColors.Cyan.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                 .padding(12.dp)
         ) {
+            // character header: small portrait + name + mood
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("NOVA", color = NovaColors.Cyan, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, null, tint = NovaColors.Muted) }
-            }
-            LazyColumn(Modifier.heightIn(max = 180.dp)) {
-                items(last) { m ->
-                    val mine = m.role == "user"
+                CharacterView(
+                    mood = mood, phase = phase, animate = st.animations,
+                    modifier = Modifier.width(56.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("NOVA", color = NovaColors.Cyan, style = MaterialTheme.typography.titleSmall)
                     Text(
-                        (if (mine) "› " else "") + m.text,
-                        color = if (mine) NovaColors.Purple else NovaColors.Text,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(vertical = 3.dp)
+                        if (generating) tr(lang(), "กำลังพิมพ์…", "typing…") else mood.label(lang()),
+                        color = NovaColors.Muted, style = MaterialTheme.typography.labelSmall
                     )
                 }
+                IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, null, tint = NovaColors.Muted) }
+            }
+            Spacer(Modifier.height(6.dp))
+            // NOVA's text box: the conversation, with her reply streaming in live
+            LazyColumn(Modifier.heightIn(max = 260.dp).fillMaxWidth()) {
+                items(last) { m ->
+                    val mine = m.role == "user"
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
+                        Text(
+                            m.text,
+                            color = NovaColors.Text,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                            modifier = Modifier
+                                .widthIn(max = 260.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (mine) NovaColors.Purple.copy(alpha = 0.35f) else NovaColors.Cyan.copy(alpha = 0.12f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
                 if (generating) item {
-                    Text(shown.ifEmpty { "…" }, color = NovaColors.Text, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        shown.ifEmpty { "…" },
+                        color = NovaColors.Text,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                        modifier = Modifier
+                            .widthIn(max = 260.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(NovaColors.Cyan.copy(alpha = 0.12f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
                 }
             }
-            error?.let { Text(it, color = NovaColors.Danger, style = MaterialTheme.typography.bodySmall) }
+            error?.let { e ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(e, color = NovaColors.Danger, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { engine.retryLast() }) { Text(tr(lang(), "ลองใหม่", "Retry")) }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = input, onValueChange = { input = it },
                     modifier = Modifier.weight(1f), singleLine = true,
-                    placeholder = { Text(tr(lang(), "พิมพ์ถึง NOVA…", "Message NOVA…")) }
+                    placeholder = { Text(tr(lang(), "พิมพ์ถึง NOVA…", "Message NOVA…")) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { send() })
                 )
-                IconButton(onClick = { engine.send(input); input = "" }, enabled = input.isNotBlank() && !generating) {
+                IconButton(onClick = { send() }, enabled = input.isNotBlank() && !generating) {
                     Icon(Icons.Rounded.Send, null, tint = NovaColors.Purple)
                 }
             }

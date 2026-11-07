@@ -23,7 +23,6 @@ import app.nova.R
 import app.nova.container
 
 private const val FACE_RATIO = 1.199f
-private const val BODY_RATIO = 0.3684f
 
 /** Maps what NOVA is feeling/doing to one of the painted expression sprites. */
 private fun faceFor(mood: Mood, phase: Phase): Int {
@@ -42,8 +41,7 @@ private fun faceFor(mood: Mood, phase: Phase): Int {
 
 /**
  * NOVA drawn from the painted character art.
- *  - compact = true  -> head-and-shoulders portrait, one painted sprite per expression (9 total)
- *  - compact = false -> full-body painted sprite (neutral pose)
+ * Head-and-shoulders portrait, one painted sprite per expression (9 total).
  * Motion (breathing, sway, squash on every voice blip) is applied to the sprite, so new sprite sets
  * can be dropped in by replacing the drawables. [skinIndex] is reserved for future sprite packs.
  */
@@ -53,7 +51,6 @@ fun CharacterView(
     phase: Phase,
     skinIndex: Int = 0,
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
     animate: Boolean = true,
     onTap: (() -> Unit)? = null
 ) {
@@ -72,9 +69,9 @@ fun CharacterView(
     }
 
     val tapMod = if (onTap != null) Modifier.pointerInput(onTap) { detectTapGestures { onTap() } } else Modifier
-    val res = if (compact) faceFor(mood, phase) else R.drawable.nova_body
+    val res = faceFor(mood, phase)
 
-    Box(modifier.aspectRatio(if (compact) FACE_RATIO else BODY_RATIO).then(tapMod)) {
+    Box(modifier.aspectRatio(FACE_RATIO).then(tapMod)) {
         Image(
             painter = painterResource(res),
             contentDescription = null,
@@ -88,7 +85,7 @@ fun CharacterView(
                         transformOrigin = TransformOrigin(0.5f, 1f)
                         scaleY = 1f + 0.012f * b + 0.04f * sq
                         scaleX = 1f - 0.006f * b - 0.02f * sq
-                        rotationZ = sway.value * (if (compact) 0.9f else 0.6f) +
+                        rotationZ = sway.value * 0.9f +
                             (if (mood == Mood.CONFUSED) 3f else 0f)
                         translationY = -size.height * 0.006f * b
                     }

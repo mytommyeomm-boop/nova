@@ -47,7 +47,7 @@ fun OnboardingScreen(s: Settings) {
         Box(Modifier.height(230.dp), contentAlignment = Alignment.Center) {
             CharacterView(
                 mood = if (step == 0 && !poked) Mood.HAPPY else if (step == last && !poked) Mood.IDLE else mood,
-                phase = Phase.IDLE, compact = true, modifier = Modifier.fillMaxHeight(),
+                phase = Phase.IDLE, modifier = Modifier.fillMaxHeight(),
                 onTap = if (step == last) ({ poked = true; engine.poke() }) else null
             )
         }
@@ -66,8 +66,8 @@ fun OnboardingScreen(s: Settings) {
                     Text(t("พบกับ NOVA", "Meet NOVA"), style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        t("NOVA มีสีหน้า 9 แบบ ขยับตัวตามจังหวะเสียงบิปตอนพูด และเปลี่ยนอารมณ์ตามบทสนทนา คุณจะเลือกมุมมองเต็มตัวได้ในหน้าตั้งค่า",
-                            "NOVA has 9 expressions, bounces along with its blip voice when talking, and changes mood with the conversation. You can switch to a full-body view in Settings."),
+                        t("NOVA มีสีหน้า 9 แบบ ขยับตัวตามจังหวะเสียงบิปตอนพูด และเปลี่ยนอารมณ์ตามบทสนทนา",
+                            "NOVA has 9 expressions, bounces along with its blip voice when talking, and changes mood with the conversation."),
                         textAlign = TextAlign.Center, color = NovaColors.Text
                     )
                 }

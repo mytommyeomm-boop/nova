@@ -34,7 +34,7 @@ The key is stored with EncryptedSharedPreferences. Messages are sent to the prov
 ## Known limitations (beta)
 - No on-device AI model. (Point the OpenAI-compatible URL at a local server if you run one.)
 - Accessibility / screen reading is not implemented.
-- Character art: the 9 expression portraits are cut from the supplied character sheet and the full-body sprite from the supplied PNG (`res/drawable-nodpi/nova_*.png`). Replace those files to change the art. Portraits have no mouth animation; talking is shown by a bounce synced to each voice blip. Full-body view is a neutral pose only (no per-expression body).
+- Character art: the 9 expression portraits are cut from the supplied character sheet (`res/drawable-nodpi/nova_*.png`). Replace those files to change the art. Portraits have no mouth animation; talking is shown by a bounce synced to each voice blip.
 - The cut-outs were made automatically; a few hair edges may show faint light specks. A proper transparent export from the artist would look cleaner.
 - Floating quick-chat panel (keyboard inside an overlay) needs real-device testing; some OEMs behave differently.
 - Reminders use inexact alarms and may fire a little late. Timers open the system Clock app.

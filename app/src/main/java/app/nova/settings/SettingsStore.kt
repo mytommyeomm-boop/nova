@@ -20,7 +20,6 @@ data class Settings(
     val baseUrl: String = "https://api.openai.com/v1",
     val persona: String = "",
     val skin: Int = 0,
-    val fullBody: Boolean = false,
     val charScale: Float = 1f,
     val animations: Boolean = true,
     val blipOn: Boolean = true,
@@ -30,7 +29,6 @@ data class Settings(
     val memoryEnabled: Boolean = true,
     val overlayEnabled: Boolean = false,
     val overlaySize: Float = 0.6f,
-    val overlayCompact: Boolean = true,
     val overlaySnap: Boolean = true,
     val overlayX: Int = 0,
     val overlayY: Int = 400,
@@ -45,7 +43,6 @@ object Keys {
     val baseUrl = stringPreferencesKey("base_url")
     val persona = stringPreferencesKey("persona")
     val skin = intPreferencesKey("skin")
-    val fullBody = booleanPreferencesKey("full_body")
     val charScale = floatPreferencesKey("char_scale")
     val animations = booleanPreferencesKey("animations")
     val blipOn = booleanPreferencesKey("blip_on")
@@ -55,7 +52,6 @@ object Keys {
     val memoryEnabled = booleanPreferencesKey("memory_enabled")
     val overlayEnabled = booleanPreferencesKey("overlay_enabled")
     val overlaySize = floatPreferencesKey("overlay_size")
-    val overlayCompact = booleanPreferencesKey("overlay_compact")
     val overlaySnap = booleanPreferencesKey("overlay_snap")
     val overlayX = intPreferencesKey("overlay_x")
     val overlayY = intPreferencesKey("overlay_y")
@@ -73,7 +69,6 @@ private fun Preferences.toSettings(): Settings {
         baseUrl = this[Keys.baseUrl] ?: d.baseUrl,
         persona = this[Keys.persona] ?: d.persona,
         skin = this[Keys.skin] ?: d.skin,
-        fullBody = this[Keys.fullBody] ?: d.fullBody,
         charScale = this[Keys.charScale] ?: d.charScale,
         animations = this[Keys.animations] ?: d.animations,
         blipOn = this[Keys.blipOn] ?: d.blipOn,
@@ -83,7 +78,6 @@ private fun Preferences.toSettings(): Settings {
         memoryEnabled = this[Keys.memoryEnabled] ?: d.memoryEnabled,
         overlayEnabled = this[Keys.overlayEnabled] ?: d.overlayEnabled,
         overlaySize = this[Keys.overlaySize] ?: d.overlaySize,
-        overlayCompact = this[Keys.overlayCompact] ?: d.overlayCompact,
         overlaySnap = this[Keys.overlaySnap] ?: d.overlaySnap,
         overlayX = this[Keys.overlayX] ?: d.overlayX,
         overlayY = this[Keys.overlayY] ?: d.overlayY,

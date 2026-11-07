@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -70,7 +71,7 @@ internal fun sseFlow(req: Request, parse: (String) -> String?): Flow<String> = c
 }
 
 class GeminiProvider(private val cfg: AiConfig) : AiProvider {
-    override fun stream(system: String, history: List<ChatMsg>): Flow<String> {
+    private fun request(system: String, history: List<ChatMsg>, fast: Boolean): Request {
         val contents = JSONArray()
         history.forEach {
             contents.put(
@@ -82,18 +83,37 @@ class GeminiProvider(private val cfg: AiConfig) : AiProvider {
         val body = JSONObject()
             .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", system))))
             .put("contents", contents)
+        // Chat replies are short: ask the model to think as little as possible so answers start fast.
+        if (fast) body.put("generationConfig", JSONObject()
+            .put("maxOutputTokens", 600)
+            .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
         val url = "https://generativelanguage.googleapis.com/v1beta/models/${cfg.model.trim()}:streamGenerateContent?alt=sse"
-        val req = Request.Builder()
+        return Request.Builder()
             .url(url)
             .header("x-goog-api-key", cfg.apiKey)
             .post(body.toString().toRequestBody(Http.json))
             .build()
-        return sseFlow(req) { data ->
-            val parts = JSONObject(data).optJSONArray("candidates")
-                ?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
-            val sb = StringBuilder()
-            if (parts != null) for (i in 0 until parts.length()) sb.append(parts.optJSONObject(i)?.optString("text").orEmpty())
-            sb.toString()
+    }
+
+    private val parse: (String) -> String? = { data ->
+        val parts = JSONObject(data).optJSONArray("candidates")
+            ?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
+        val sb = StringBuilder()
+        if (parts != null) for (i in 0 until parts.length()) {
+            val p = parts.optJSONObject(i)
+            if (p?.optBoolean("thought", false) != true) sb.append(p?.optString("text").orEmpty())
+        }
+        sb.toString()
+    }
+
+    override fun stream(system: String, history: List<ChatMsg>): Flow<String> = flow {
+        var any = false
+        try {
+            sseFlow(request(system, history, true), parse).collect { any = true; emit(it) }
+        } catch (e: AiException) {
+            // If the fast/thinking options are rejected (400), fall back to a plain request.
+            if (!any && e.code == 400) sseFlow(request(system, history, false), parse).collect { emit(it) }
+            else throw e
         }
     }
 }
