@@ -276,7 +276,7 @@ class OverlayService : Service() {
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CharacterView(
-                mood = mood, phase = phase, skinIndex = st.skin, compact = st.overlayCompact, animate = st.animations,
+                mood = mood, phase = phase, compact = st.overlayCompact, animate = st.animations,
                 modifier = Modifier
                     .width((200 * st.overlaySize).dp)
                     .pointerInput(Unit) {

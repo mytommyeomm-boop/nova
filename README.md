@@ -1,7 +1,7 @@
 # NOVA (beta 0.1.0) — Android AI companion
 
 Native Android app (Kotlin, Jetpack Compose, Material 3, Room, DataStore, OkHttp).
-Original cat-eared vector character, Undertale-style blip voice, memory you control, floating overlay companion.
+Painted cat-eared character (from the supplied art sheet), Undertale-style blip voice, memory you control, floating overlay companion.
 
 > **Status: beta, written without access to an Android SDK, so it has NOT been compiled or run yet.**
 > The first CI build may show a few compile errors. Send the log and they get fixed.
@@ -15,7 +15,7 @@ Or in Android Studio: *File > Open* this folder, let Gradle sync, press Run.
 
 ## Configure an AI provider
 Settings > AI.
-- **Gemini**: get a key at https://aistudio.google.com/apikey, choose *Gemini*, model e.g. `gemini-2.5-flash`, paste key, *Save key*.
+- **Gemini**: get a key at https://aistudio.google.com/apikey, choose *Gemini*, model e.g. `gemini-3.8-flash`, paste key, *Save key*.
 - **OpenAI-compatible**: choose it, set *Base URL* (default `https://api.openai.com/v1`), model name, key.
   Local servers work too (e.g. `http://127.0.0.1:8080/v1`; plain http is allowed only for localhost/127.0.0.1/10.0.2.2).
 The key is stored with EncryptedSharedPreferences. Messages are sent to the provider you choose.
@@ -34,8 +34,10 @@ The key is stored with EncryptedSharedPreferences. Messages are sent to the prov
 ## Known limitations (beta)
 - No on-device AI model. (Point the OpenAI-compatible URL at a local server if you run one.)
 - Accessibility / screen reading is not implemented.
-- Character art is a first-pass vector prototype of the supplied design sheet, not final art. Skins are palettes in `companion/Mood.kt`.
+- Character art: the 9 expression portraits are cut from the supplied character sheet and the full-body sprite from the supplied PNG (`res/drawable-nodpi/nova_*.png`). Replace those files to change the art. Portraits have no mouth animation; talking is shown by a bounce synced to each voice blip. Full-body view is a neutral pose only (no per-expression body).
+- The cut-outs were made automatically; a few hair edges may show faint light specks. A proper transparent export from the artist would look cleaner.
 - Floating quick-chat panel (keyboard inside an overlay) needs real-device testing; some OEMs behave differently.
 - Reminders use inexact alarms and may fire a little late. Timers open the system Clock app.
 - Overlay does not restart after reboot; open the app once.
+- Only one character for now (the old colour-skin option was removed because it only applied to the earlier vector art).
 - Single `ChatEngine` acts as the shared view-model instead of per-screen ViewModels.

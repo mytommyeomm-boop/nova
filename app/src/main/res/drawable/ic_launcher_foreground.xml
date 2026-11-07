@@ -1,9 +1,5 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#A78BFA" android:pathData="M33,46 L35,22 L51,35 Z" />
-    <path android:fillColor="#A78BFA" android:pathData="M75,46 L73,22 L57,35 Z" />
-    <path android:fillColor="#A78BFA" android:pathData="M32,58 a22,22 0 1,0 44,0 a22,22 0 1,0 -44,0 z" />
-    <path android:fillColor="#22D3EE" android:pathData="M42,58 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 z" />
-    <path android:fillColor="#22D3EE" android:pathData="M58,58 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 z" />
-</vector>
+<?xml version="1.0" encoding="utf-8"?>
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/nova_face_idle"
+    android:insetLeft="16dp" android:insetRight="16dp"
+    android:insetTop="20dp" android:insetBottom="12dp" />

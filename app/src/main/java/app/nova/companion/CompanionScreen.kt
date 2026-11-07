@@ -107,7 +107,7 @@ fun CompanionScreen(engine: ChatEngine, s: Settings, onOpenSettings: () -> Unit)
             // character
             Box(Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
                 CharacterView(
-                    mood = mood, phase = phase, skinIndex = s.skin, animate = s.animations,
+                    mood = mood, phase = phase, compact = !s.fullBody, animate = s.animations,
                     modifier = Modifier.fillMaxHeight(s.charScale.coerceIn(0.5f, 1f)),
                     onTap = { engine.poke() }
                 )
@@ -177,6 +177,7 @@ fun CompanionScreen(engine: ChatEngine, s: Settings, onOpenSettings: () -> Unit)
                 Text(t("ตั้งค่าด่วน", "Quick settings"), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
                 QuickSwitch(t("เสียงบิป", "Blip voice"), s.blipOn) { v -> ctx.container.settings.save { it[Keys.blipOn] = v } }
+                QuickSwitch(t("มุมมองเต็มตัว", "Full-body view"), s.fullBody) { v -> ctx.container.settings.save { it[Keys.fullBody] = v } }
                 QuickSwitch(t("แอนิเมชัน", "Animations"), s.animations) { v -> ctx.container.settings.save { it[Keys.animations] = v } }
                 Text(t("ขนาดตัวละคร", "Character size"), color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium)
                 var size by remember(s.charScale) { mutableFloatStateOf(s.charScale) }

@@ -20,7 +20,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import app.nova.MainActivity
 import app.nova.chat.ChatEngine
-import app.nova.companion.Skins
 import app.nova.container
 import app.nova.overlay.Overlay
 import app.nova.overlay.OverlayGate
@@ -129,10 +128,7 @@ fun SettingsScreen(engine: ChatEngine, s: Settings) {
         // ---------- character ----------
         SectionLabel(t("ตัวละคร", "Character"))
         NovaCard(Modifier.fillMaxWidth()) {
-            Text(t("สกิน", "Skin"), color = NovaColors.Muted, style = MaterialTheme.typography.labelMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
-                Skins.forEachIndexed { i, sk -> NovaChip(s.skin == i, sk.label(s.lang)) { store.save { it[Keys.skin] = i } } }
-            }
+            SwitchRow(t("มุมมองเต็มตัว", "Full-body view"), t("ปิด = แสดงใบหน้าพร้อมสีหน้า 9 แบบ เปิด = ภาพเต็มตัว (ท่านิ่ง)", "Off = portrait with 9 expressions. On = full-body (neutral pose)."), s.fullBody) { v -> store.save { it[Keys.fullBody] = v } }
             SliderRow(t("ขนาดตัวละคร", "Character size"), s.charScale, 0.5f..1f) { v -> store.save { it[Keys.charScale] = v } }
             SwitchRow(t("แอนิเมชัน", "Animations"), t("ปิดเพื่อประหยัดแบตเตอรี่", "Turn off to save battery"), s.animations) { v -> store.save { it[Keys.animations] = v } }
         }

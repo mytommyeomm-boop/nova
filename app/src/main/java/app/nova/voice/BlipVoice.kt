@@ -5,6 +5,9 @@ import android.media.AudioAttributes
 import android.media.SoundPool
 import app.nova.companion.Mood
 import app.nova.settings.SettingsStore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -23,6 +26,9 @@ class BlipVoice(ctx: Context, private val settings: SettingsStore) {
                 .build()
         ).build()
     private var soundId = 0
+    private val _tick = MutableStateFlow(0)
+    /** Increments on every blip so the character can squash/bounce in sync with the voice. */
+    val blipTick: StateFlow<Int> = _tick.asStateFlow()
     private var loaded = false
 
     init {
@@ -33,6 +39,7 @@ class BlipVoice(ctx: Context, private val settings: SettingsStore) {
     }
 
     fun blip(c: Char, mood: Mood) {
+        _tick.value = _tick.value + 1
         val s = settings.state.value
         if (!s.blipOn || !loaded) return
         val base = when (s.blipVoice) { 0 -> 0.75f; 2 -> 1.4f; else -> 1.0f }

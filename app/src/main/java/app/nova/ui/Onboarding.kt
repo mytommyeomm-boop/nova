@@ -17,7 +17,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.nova.companion.CharacterView
 import app.nova.companion.Mood
 import app.nova.companion.Phase
-import app.nova.companion.Skins
 import app.nova.container
 import app.nova.settings.Keys
 import app.nova.settings.Settings
@@ -48,7 +47,7 @@ fun OnboardingScreen(s: Settings) {
         Box(Modifier.height(230.dp), contentAlignment = Alignment.Center) {
             CharacterView(
                 mood = if (step == 0 && !poked) Mood.HAPPY else if (step == last && !poked) Mood.IDLE else mood,
-                phase = Phase.IDLE, skinIndex = s.skin, compact = true, modifier = Modifier.fillMaxHeight(),
+                phase = Phase.IDLE, compact = true, modifier = Modifier.fillMaxHeight(),
                 onTap = if (step == last) ({ poked = true; engine.poke() }) else null
             )
         }
@@ -64,11 +63,13 @@ fun OnboardingScreen(s: Settings) {
                     )
                 }
                 1 -> {
-                    Text(t("เลือกสกินตัวละคร", "Choose a look"), style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Skins.forEachIndexed { i, sk -> NovaChip(s.skin == i, sk.label(s.lang)) { store.save { it[Keys.skin] = i } } }
-                    }
+                    Text(t("พบกับ NOVA", "Meet NOVA"), style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        t("NOVA มีสีหน้า 9 แบบ ขยับตัวตามจังหวะเสียงบิปตอนพูด และเปลี่ยนอารมณ์ตามบทสนทนา คุณจะเลือกมุมมองเต็มตัวได้ในหน้าตั้งค่า",
+                            "NOVA has 9 expressions, bounces along with its blip voice when talking, and changes mood with the conversation. You can switch to a full-body view in Settings."),
+                        textAlign = TextAlign.Center, color = NovaColors.Text
+                    )
                 }
                 2 -> {
                     Text(t("ภาษาของ NOVA", "NOVA's language"), style = MaterialTheme.typography.titleLarge)
@@ -82,7 +83,7 @@ fun OnboardingScreen(s: Settings) {
                     Text(t("เชื่อมต่อ AI", "Connect an AI"), style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NovaChip(s.provider == "gemini", "Gemini") { store.save { it[Keys.provider] = "gemini"; it[Keys.model] = "gemini-2.5-flash" } }
+                        NovaChip(s.provider == "gemini", "Gemini") { store.save { it[Keys.provider] = "gemini"; it[Keys.model] = "gemini-3.8-flash" } }
                         NovaChip(s.provider == "openai", "OpenAI-compatible") { store.save { it[Keys.provider] = "openai"; it[Keys.model] = "gpt-4o-mini" } }
                     }
                     OutlinedTextField(

@@ -16,10 +16,11 @@ data class Settings(
     val onboarded: Boolean = false,
     val lang: String = "th",
     val provider: String = "gemini", // gemini | openai
-    val model: String = "gemini-2.5-flash",
+    val model: String = "gemini-3.8-flash",
     val baseUrl: String = "https://api.openai.com/v1",
     val persona: String = "",
     val skin: Int = 0,
+    val fullBody: Boolean = false,
     val charScale: Float = 1f,
     val animations: Boolean = true,
     val blipOn: Boolean = true,
@@ -44,6 +45,7 @@ object Keys {
     val baseUrl = stringPreferencesKey("base_url")
     val persona = stringPreferencesKey("persona")
     val skin = intPreferencesKey("skin")
+    val fullBody = booleanPreferencesKey("full_body")
     val charScale = floatPreferencesKey("char_scale")
     val animations = booleanPreferencesKey("animations")
     val blipOn = booleanPreferencesKey("blip_on")
@@ -67,10 +69,11 @@ private fun Preferences.toSettings(): Settings {
         onboarded = this[Keys.onboarded] ?: d.onboarded,
         lang = this[Keys.lang] ?: d.lang,
         provider = this[Keys.provider] ?: d.provider,
-        model = this[Keys.model] ?: d.model,
+        model = (this[Keys.model] ?: d.model).let { if (it.trim() == "gemini-2.5-flash") "gemini-3.8-flash" else it }, // migrate retired model
         baseUrl = this[Keys.baseUrl] ?: d.baseUrl,
         persona = this[Keys.persona] ?: d.persona,
         skin = this[Keys.skin] ?: d.skin,
+        fullBody = this[Keys.fullBody] ?: d.fullBody,
         charScale = this[Keys.charScale] ?: d.charScale,
         animations = this[Keys.animations] ?: d.animations,
         blipOn = this[Keys.blipOn] ?: d.blipOn,
