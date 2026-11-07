@@ -22,8 +22,8 @@ import androidx.compose.ui.res.painterResource
 import app.nova.R
 import app.nova.container
 
-private const val FACE_RATIO = 0.989f
-private const val BODY_RATIO = 0.572f
+private const val FACE_RATIO = 1.199f
+private const val BODY_RATIO = 0.3684f
 
 /** Maps what NOVA is feeling/doing to one of the painted expression sprites. */
 private fun faceFor(mood: Mood, phase: Phase): Int {

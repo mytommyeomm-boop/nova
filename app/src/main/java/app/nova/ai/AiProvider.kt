@@ -17,7 +17,7 @@ data class ChatMsg(val role: String, val text: String) // role: user | assistant
 
 data class AiConfig(val provider: String, val model: String, val baseUrl: String, val apiKey: String)
 
-class AiException(message: String, val retryable: Boolean = false) : Exception(message)
+class AiException(message: String, val retryable: Boolean = false, val code: Int = 0) : Exception(message)
 
 /** Add new providers by implementing this interface and registering them in [AiFactory]. */
 interface AiProvider {
@@ -46,7 +46,7 @@ internal fun sseFlow(req: Request, parse: (String) -> String?): Flow<String> = c
             call.execute().use { resp ->
                 if (!resp.isSuccessful) {
                     val body = resp.body?.string().orEmpty().take(300)
-                    throw AiException("HTTP ${resp.code}: $body", resp.code == 429 || resp.code >= 500)
+                    throw AiException("HTTP ${resp.code}: $body", resp.code == 429 || resp.code >= 500, resp.code)
                 }
                 val src = resp.body?.source() ?: throw AiException("Empty response", true)
                 while (true) {

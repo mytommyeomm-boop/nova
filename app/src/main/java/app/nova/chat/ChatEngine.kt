@@ -241,7 +241,13 @@ class ChatEngine(
         return when (e) {
             is UnknownHostException -> tr(l, "ไม่มีอินเทอร์เน็ต ลองใหม่เมื่อออนไลน์", "No internet connection. Try again when you're online.")
             is SocketTimeoutException -> tr(l, "การเชื่อมต่อหมดเวลา", "The request timed out.")
-            is AiException -> e.message ?: "AI error"
+            is AiException -> when (e.code) {
+                503, 500, 502, 504 -> tr(l, "เซิร์ฟเวอร์ AI กำลังมีคนใช้เยอะ ลองแล้วหลายครั้งแต่ยังไม่ได้ รอสักครู่แล้วกด \"ลองใหม่\" นะ", "The AI server is busy right now. I retried a few times; wait a moment and tap Retry.")
+                429 -> tr(l, "ใช้งานเกินโควตาชั่วคราว รอสักครู่แล้วลองใหม่", "Rate limit reached. Wait a bit and retry.")
+                404 -> tr(l, "ไม่พบโมเดลนี้ ไปที่ ตั้งค่า > โมเดล แล้วเปลี่ยนชื่อโมเดล", "Model not found. Change it in Settings > Model.")
+                400, 401, 403 -> tr(l, "API key หรือโมเดลไม่ถูกต้อง ตรวจสอบที่ ตั้งค่า > AI", "Invalid API key or model. Check Settings > AI.")
+                else -> e.message ?: "AI error"
+            }
             is IOException -> tr(l, "เครือข่ายมีปัญหา: ", "Network problem: ") + (e.message ?: "")
             else -> e.message ?: "Error"
         }
@@ -308,7 +314,7 @@ class ChatEngine(
                         throw e
                     } catch (e: Exception) {
                         val retryable = e is IOException || (e is AiException && e.retryable)
-                        if (!gotAny && attempt < 1 && retryable) { attempt++; delay(1200); continue }
+                        if (!gotAny && attempt < 4 && retryable) { attempt++; delay(1500L * attempt); continue } // backoff 1.5s,3s,4.5s,6s
                         err = e
                         break
                     }
